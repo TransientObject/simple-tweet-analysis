@@ -1,2 +1,4 @@
-# twitter
-About collecting tweets and extracting basic data from them
+# twitter-simple-analysis
+About collecting tweets 
+AND 
+Extracting basic data
