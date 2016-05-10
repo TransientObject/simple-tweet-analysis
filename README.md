@@ -13,6 +13,6 @@ Download [TIGER shapefiles](https://www.census.gov/geo/maps-data/data/tiger-line
 
 ## Examples
 
-    Count english tweets containing each of the keywords
+    Count english tweets frequency (DF) for each keyword
 
         python analyze.py -s df -d tweets.json -o kw_df_count.json -kw keyword_terms.txt -en
