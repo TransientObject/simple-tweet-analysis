@@ -160,9 +160,14 @@ def main():
     """ The main functionality """
     current_time = time.strftime('%Y-%m-%d-%H-%M-%S')
     args = parse_cmd_args()
+    track_terms, locs = None, None
     if args.track:
+        if not args.track:
+            raise ValueError('Keyword file is not supplied')
         track_terms = get_track_terms(args.track)
     if args.geobox:
+        if not args.geobox:
+            raise ValueError('Bounding box file is not supplied')
         locs = get_locations(args.geobox)
     set_logger(args, current_time)
     auth = authenticate(args.credentials)
