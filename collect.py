@@ -90,8 +90,7 @@ def get_locations(loc_fn):
     coordinates = coordinate_string.split(',')
     coordinates = [float(c.strip()) for c in coordinates]
     locs = [coordinates[1], coordinates[0], coordinates[3], coordinates[2]]
-    slocs = str(locs).strip('[]')
-    return slocs
+    return locs
 
 def parse_cmd_args():
     """ Parses command line arguments """
@@ -161,7 +160,6 @@ def main():
     """ The main functionality """
     current_time = time.strftime('%Y-%m-%d-%H-%M-%S')
     args = parse_cmd_args()
-    track_terms, locs = None, None
     if args.track:
         track_terms = get_track_terms(args.track)
     if args.geobox:
@@ -196,8 +194,8 @@ def main():
         """
         Does not check user location field
         """
-        print "--- Bounding box : {}---\n".format(locs)
-        logging.debug("--- Bounding box : %s---", locs)
+        print "--- Bounding box : {}---\n".format(str(locs))
+        logging.debug("--- Bounding box : %s---", str(locs))
         stream.filter(locations=locs)
     else:
         print "--- Listening to the Public Stream ---"
