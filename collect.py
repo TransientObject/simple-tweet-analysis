@@ -97,12 +97,21 @@ def parse_cmd_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--credentials", help="path to credentials file")
     parser.add_argument("-t", "--track", help="File containing keyword terms to track")
-    parser.add_argument("-op", "--outprefix", help="tweet/log file prefix")
-    parser.add_argument("-d", "--datadir", help='directory to contain tweets')
+    parser.add_argument("-op", "--outprefix", help="tweet/log file prefix default=''", default="")
+    parser.add_argument("-d", "--datadir", help='directory to contain tweets default="data"',\
+                                           default="data")
     parser.add_argument("-g", "--geobox", help="File containing bounding box coordinates")
     parser.add_argument("-l", "--logdir", default="logs", help="Log file directory, default=logs")
-    args = parser.parse_args()
-    return args
+    parser.add_argument("-s", "--stop", default=True,\
+                        help="Whether to stop harvesting after exception, default=True",\
+                        action='store_false')
+    arguments = parser.parse_args()
+    if not arguments.credentials:
+        print "Missing credentials"
+        sys.exit()
+    if not (arguments.track or arguments.geobox):
+        print "WARNING: Harvesting public tweetes - track and geobox are not supplied"
+    return arguments
 def set_logger(args, current_time):
     """ Set up logger
     Args:
@@ -156,10 +165,9 @@ def set_stream(args, auth, current_time):
     stream = tweepy.Stream(auth=auth, listener=listener)
     return stream
 
-def main():
-    """ The main functionality """
+def main(args):
+    """ Can start three different streams """
     current_time = time.strftime('%Y-%m-%d-%H-%M-%S')
-    args = parse_cmd_args()
     track_terms, locs = None, None
     if args.track:
         if not args.track:
@@ -207,4 +215,10 @@ def main():
         logging.debug('--- Listening to the Public Stream---')
         stream.sample()
 if __name__ == '__main__':
-    main()
+    cmd_args = parse_cmd_args()
+    while True:
+        try:
+            main(cmd_args)
+        except AttributeError as tweepy_bug:
+            if not cmd_args.stop:
+                break
