@@ -18,7 +18,7 @@ import string
 import os
 from nltk.tokenize import TweetTokenizer
 from collections import defaultdict
-import cPickle
+import pickle
 
 def load_offsets(datapath, pickle=True):
     offsets = []
@@ -29,9 +29,10 @@ def load_offsets(datapath, pickle=True):
             offset += len(line)
     if pickle:
         with open(datapath + 'line-offset.pkl', 'wb') as fout:
-            cPickle.dump(offsets, fout)
+            pickle.dump(offsets, fout)
 
     return offsets
+
 def has_kw(text, kwlist):
     """
     Return matches would return matching keywords
@@ -44,7 +45,7 @@ def has_kw(text, kwlist):
     words = text.split()
     unigram_track = set([i for i in kwlist if ' ' not in i ])
     ngram_track = [' ' + i + ' ' for i in kwlist if ' ' in i]
-    matches = filter(lambda x: x in unigram_track, words) 
+    matches = [x for x in words if x in unigram_track] 
     for track in ngram_track:
         if track in text:
             matches.extend([track.strip()]*text.count(track))
@@ -56,7 +57,7 @@ def has_kw(text, kwlist):
 
 def find_ngrams(text, n):
     input_list = text.split()
-    ret = zip(*[input_list[i:] for i in range(n)])
+    ret = list(zip(*[input_list[i:] for i in range(n)]))
     return [' '.join(i) for i in ret]
 
 def html_unescape(text):
@@ -106,6 +107,7 @@ def preprocess(tweet, stopwords):
     text =' '.join(tokens)
     # removed stopwords
     return text
+
 def sentiment_preprocess(tweet, stopwords):
     import string
     tokenizer = TweetTokenizer(preserve_case=False, reduce_len=True, strip_handles=False)
@@ -121,18 +123,20 @@ def sentiment_preprocess(tweet, stopwords):
     text =' '.join(tokens)
     # removed stopwords
     return text
+
 def load_states_shapefile(shpfile="shapes/2015/tl_2015_us_state.shp"):
     d = {}
     for tmp in shpreader.Reader(shpfile).records():
         d[tmp.attributes['NAME'].lower()] = tmp.geometry
     return d
+
 def geofilter(tweet_obj, shp):
     # modified resolve_state
     if tweet_obj.get('coordinates', None) and tweet_obj['coordinates'].get('coordinates', None):
         if shp is None:
             return "geotagged"
         point = shapely.geometry.Point(tuple(tweet_obj['coordinates']['coordinates'])) 
-        for k,v in shp.items():
+        for k,v in list(shp.items()):
             if v.contains(point):
                 return k
         else:
@@ -141,10 +145,10 @@ def geofilter(tweet_obj, shp):
         if shp is None:
             return "geotagged"
         # bounding box (minx, miny, maxx, maxy)
-        for k,v in shp.items():
+        for k,v in list(shp.items()):
             try:
                 c = tweet_obj['place']['bounding_box']['coordinates'][0]
-            except Exception ,e:
+            except Exception as e:
                 return None
             bb  = shapely.geometry.Polygon(c)
             (minx, miny, maxx, maxy) = bb.bounds
@@ -157,6 +161,7 @@ def geofilter(tweet_obj, shp):
             return None
     else:
         return None
+
 def get_sentiment(text):
     """Returns valence score of text, uses LabMT, removes stopValues"""
     from labMTsimple import storyLab
@@ -177,6 +182,7 @@ def load_us_shape():
             us_shp.append(country)
     us_shp = us_shp[0].geometry
     return {"us":us_shp}
+
 def has_media(tweet_obj, instagram=False, photo_only=False):
     """Checks whether tweet contains a media entity"""
     if tweet_obj.get('entities', None) is None:
@@ -205,6 +211,7 @@ def has_media(tweet_obj, instagram=False, photo_only=False):
                     return 0
             else:
                 return 0
+
 class Workers(object):
     def __init__(self, subroutine, datapath, output, kw, 
                     line_offsets, nor, oldr, english_only,
@@ -250,12 +257,12 @@ class Workers(object):
          
         if line_offsets:
             with open(line_offsets, 'rb') as fin:
-                self.inlist = cPickle.load(fin)
+                self.inlist = pickle.load(fin)
         else:
             self.inlist = load_offsets(datapath, pickle=True) 
-        print '--- # Tweets to preprocess :',len(self.inlist)
-        print '--- Subroutine name : ' , subroutine
-        print '--- Output will be stored in : ' , self.outfile
+        print('--- # Tweets to preprocess :',len(self.inlist))
+        print('--- Subroutine name : ' , subroutine)
+        print('--- Output will be stored in : ' , self.outfile)
     
         self.inq = mp.Queue()
         self.outq = mp.Queue()
@@ -285,8 +292,9 @@ class Workers(object):
             self.ps = [mp.Process(target = self.profiler, args=()) for x in range(self.numprocs)]
             self.pout = mp.Process(target=self.read_output_q_profiler, args=())
         else:
-            print "Invalid subroutine name"
+            print("Invalid subroutine name")
             sys.exit()
+
     def start(self):
                 
         self.pin.start()
@@ -300,15 +308,17 @@ class Workers(object):
 
         for p in self.ps:
             p.join()
-            print "Done" , i
+            print("Done" , i)
             i += 1
         self.pout.join()
+
     def load_input_q(self):
         for offset in self.inlist:
             self.inq.put(offset)
 
         for i in range(self.numprocs):
             self.inq.put("STOP")
+
     def read_output_q_json(self):
         cur = 0
         stop = 0
@@ -335,6 +345,7 @@ class Workers(object):
                         self.total_df += 1
             json.dump(per_place, outfile)
             outfile.write("\n")
+
     def read_output_q_media(self):
         cur = 0
         stop = 0
@@ -361,6 +372,7 @@ class Workers(object):
                     per_place[g][k]['fraction'] = per_place[g][k]['media']*1.0/per_place[g][k]['total_df']
             json.dump(per_place, outfile)
             outfile.write('\n')
+
     def read_output_q_profiler(self):
         cur = 0
         stop = 0
@@ -377,6 +389,7 @@ class Workers(object):
                         result =result + counter
             json.dump(result, outfile)
             outfile.write('\n')
+
     def read_output_q_tc(self):
         cur = 0
         stop = 0
@@ -403,12 +416,13 @@ class Workers(object):
                             per_place[geotag][kw] = dd
             for g in per_place:
                 for k in per_place[g]:
-                    sorted_d = sorted(per_place[g][k].items(), key=operator.itemgetter(1), reverse=True)
+                    sorted_d = sorted(list(per_place[g][k].items()), key=operator.itemgetter(1), reverse=True)
                     values = set(sorted(list(set([i[1] for i in sorted_d])), reverse=True)[:self.topk+1])
-                    sorted_d = filter(lambda x: x[1] in values, sorted_d) 
+                    sorted_d = [x for x in sorted_d if x[1] in values] 
                     per_place[g][k] = dict(sorted_d)
             json.dump(per_place, outfile)
             outfile.write('\n')
+
     def read_output_q_mc(self):
         cur = 0
         stop = 0
@@ -428,12 +442,13 @@ class Workers(object):
                             per_place[geotag][kw] = per_place[geotag].get(kw, 0) + 1
                         per_place[geotag]['total_df'] = per_place[geotag].get('total_df', 0) + 1
             for g in per_place:
-                sorted_d = sorted(per_place[g].items(), key=operator.itemgetter(1), reverse=True)
+                sorted_d = sorted(list(per_place[g].items()), key=operator.itemgetter(1), reverse=True)
                 values = set(sorted(list(set([i[1] for i in sorted_d])), reverse=True)[:self.topk+1])
-                sorted_d = filter(lambda x: x[1] in values, sorted_d)
+                sorted_d = [x for x in sorted_d if x[1] in values]
                 per_place[g] = dict(sorted_d)
             json.dump(per_place, outfile)
             outfile.write('\n')
+
     def read_output_q_sentiment(self):
         cur = 0
         stop = 0
@@ -461,7 +476,7 @@ class Workers(object):
                     per_place[g][k]['magnitude'] = get_sentiment(' '.join(per_place[g][k]['text']))
                     #### delete the following line 
                     per_place[g][k]['text'] = None
-                    print "----{}----{} computed".format(enum, k)
+                    print("----{}----{} computed".format(enum, k))
             json.dump(per_place, outfile)
             outfile.write('\n')
 
@@ -522,13 +537,13 @@ class Workers(object):
                     kws = has_kw(text, self.track)
 
                     ## now counts the ngram terms as one term
-                    total_tf = len(kws) + (len(text.split()) - sum(map(lambda x: len(x.split()), kws)))
+                    total_tf = len(kws) + (len(text.split()) - sum([len(x.split()) for x in kws]))
 
                     self.outq.put((offset, kws, total_tf, geotag))
-                except ValueError, v:   
+                except ValueError as v:   
                     continue
                 except Exception as e:
-                    print traceback.format_exc()
+                    print(traceback.format_exc())
         self.outq.put("STOP")  
 
     def media(self):
@@ -556,7 +571,7 @@ class Workers(object):
                 except ValueError as e:
                     continue
                 except Exception as e:
-                    print traceback.format_exc()
+                    print(traceback.format_exc())
         self.outq.put("STOP")
         
     def sentiment(self):
@@ -579,12 +594,12 @@ class Workers(object):
                             continue
                     text = preprocess(tweet_obj, self.stopword)
                     kws = set(has_kw(text, self.track))
-                    text = ' '.join(map(lambda x: x.lstrip(string.punctuation), text.split()))
+                    text = ' '.join([x.lstrip(string.punctuation) for x in text.split()])
                     self.outq.put((tweet_obj['id_str'], kws, geotag, text))
                 except ValueError as e:
                     continue
                 except Exception as e:
-                    print traceback.format_exc()
+                    print(traceback.format_exc())
         self.outq.put("STOP")
 
     def count_retweet(self):
@@ -626,7 +641,7 @@ class Workers(object):
                 except ValueError as e:
                     continue
                 except Exception as e:
-                    print traceback.format_exc()
+                    print(traceback.format_exc())
         self.outq.put("STOP")
 
     def df(self):
@@ -652,14 +667,15 @@ class Workers(object):
                     text = preprocess(tweet_obj, self.stopword)
                     #total_tf = len(text.split())
                     kws = set(has_kw(text, self.track))
-                    total_tf = len(kws) + (len(text.split()) - sum(map(lambda x: len(x.split()), kws)))
+                    total_tf = len(kws) + (len(text.split()) - sum([len(x.split()) for x in kws]))
                     #kws = set(filter(lambda x: x in self.track, text.split()))
                     self.outq.put((tweet_obj['id_str'], kws, total_tf, geotag))
                 except ValueError as e:
                     continue
                 except Exception as e:
-                    print traceback.format_exc()
+                    print(traceback.format_exc())
         self.outq.put("STOP")
+
     def profiler(self):
         """total tweets, retweet, english, geotagged tweets"""
         with open(self.datapath, 'rb') as fin:
@@ -681,13 +697,14 @@ class Workers(object):
                     profile[state + '-total'] += 1
                     profile[state +'-english'] += int(tweet_obj.get("lang", None) == 'en')
                     profile[state + '-geotagged'] += int(geofilter(tweet_obj, None) != None)
-                    cprofile = Counter({k:Counter(v) if isinstance(v, dict) else v for k, v in profile.items()})
+                    cprofile = Counter({k:Counter(v) if isinstance(v, dict) else v for k, v in list(profile.items())})
                     self.outq.put((tweet_obj['id_str'], cprofile))
                 except ValueError as e:
                     continue
                 except Exception as e:
-                    print traceback.format_exc()
-        self.outq.put("STOP")  
+                    print(traceback.format_exc())
+        self.outq.put("STOP")
+
     def term_correlation(self):
         """What are the terms that co-occur with given term: DF like"""
         with open(self.datapath, 'rb') as fin:
@@ -714,9 +731,10 @@ class Workers(object):
                 except ValueError as e:
                     continue
                 except Exception as e:
-                    print traceback.format_exc()
+                    print(traceback.format_exc())
 
-        self.outq.put("STOP")       
+        self.outq.put("STOP")
+
     def most_common(self):
         """What are the terms that co-occur with given term: DF like"""
         with open(self.datapath, 'rb') as fin:
@@ -742,9 +760,10 @@ class Workers(object):
                 except ValueError as e:
                     continue
                 except Exception as e:
-                    print traceback.format_exc()
+                    print(traceback.format_exc())
 
-        self.outq.put("STOP") 
+        self.outq.put("STOP")
+
 if __name__ == "__main__":
     ### Command line parser
     parser = argparse.ArgumentParser()
@@ -784,14 +803,14 @@ if __name__ == "__main__":
     _start = time.time()
         
     #if None in [args.subroutine, args.datapath, args.kw]:
-    if not all(map(lambda x: x != None, [args.subroutine, args.datapath, args.kw])):
-        print "Some required parameters are missing"
+    if not all([x != None for x in [args.subroutine, args.datapath, args.kw]]):
+        print("Some required parameters are missing")
         sys.exit()
     if args.geofilter and args.geofilter.strip().lower() != 'custom' and args.shapefile:
-        print "WARNING: shapefile will not be used. specifiy custom in geofilter"
+        print("WARNING: shapefile will not be used. specifiy custom in geofilter")
         sys.exit()
     if str(args.geofilter).strip().lower() not in ['us', 'states', 'geotagged', 'custom', 'none']:
-        print "Invalid value in geofilter, Quitting!"
+        print("Invalid value in geofilter, Quitting!")
         sys.exit()
     workers = Workers(args.subroutine, args.datapath, args.output, args.kw, args.line_offsets, 
                     args.noretweet, args.no_oldr, args.english_only, 
@@ -800,4 +819,4 @@ if __name__ == "__main__":
                     args.topk, args.ngram) 
 
     workers.start()
-    print time.time() - _start 
+    print(time.time() - _start) 

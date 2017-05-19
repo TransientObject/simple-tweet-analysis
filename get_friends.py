@@ -6,7 +6,7 @@ Collects friends' userids
 """
 import time
 import pandas as pd
-import Queue
+import queue
 import tweepy
 import csv
 import json
@@ -26,14 +26,14 @@ def main(credentials='rest_credentials.json'):
         print ("Could not Authenticate")
         sys.exit(-1)
 
-    print "--- Authentication Successful ---"
+    print("--- Authentication Successful ---")
 
     outdir = sys.argv[1]
     idfile = sys.argv[2]
     ls = open(idfile).read().splitlines()
 
     for uid in ls:
-        print uid
+        print(uid)
         friends = []
         try:
             for page in tweepy.Cursor(api.friends_ids, user_id=uid).pages():
@@ -45,8 +45,8 @@ def main(credentials='rest_credentials.json'):
 			
                 fout.write(",".join(friends) + os.linesep)
 
-        except Exception , e :
-            print str(e)
+        except Exception as e :
+            print(str(e))
 
 if __name__ == "__main__":
     main()

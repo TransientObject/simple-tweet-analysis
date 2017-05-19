@@ -22,7 +22,7 @@ class SListener(tweepy.StreamListener):
         self.logger = logging
         self.datadir = datadir
         if not os.path.isdir(self.datadir):
-            print "--- Created data directory {}---".format(self.datadir)
+            print("--- Created data directory {}---".format(self.datadir))
             os.mkdir(self.datadir)
         self.start_date = datetime.now().date()
         self.output_file_prefix = output_file_prefix
@@ -68,7 +68,7 @@ def get_track_terms(track_fn):
     """Returns list of track terms"""
     with open(track_fn, 'rb') as fin:
         terms = fin.readlines()
-    terms = filter(None, [term.strip().lower().translate(None, ' ') for term in terms])
+    terms = [_f for _f in [term.strip().lower().translate(None, ' ') for term in terms] if _f]
     # remove duplicates
     terms = list(set(terms))
     return terms
@@ -107,10 +107,10 @@ def parse_cmd_args():
                         action='store_false')
     arguments = parser.parse_args()
     if not arguments.credentials:
-        print "Missing credentials"
+        print("Missing credentials")
         sys.exit()
     if not (arguments.track or arguments.geobox):
-        print "WARNING: Harvesting public tweetes - track and geobox are not supplied"
+        print("WARNING: Harvesting public tweetes - track and geobox are not supplied")
     return arguments
 def set_logger(args, current_time):
     """ Set up logger
@@ -124,8 +124,8 @@ def set_logger(args, current_time):
     if not os.path.exists(args.logdir):
         os.mkdir(args.logdir)
     # log basic info
-    print "--- START TIME : {} ---\n".format(current_time)
-    print "--- LOG FILE : {} ---\n".format(args.outprefix +'.'+ current_time + '.log')
+    print("--- START TIME : {} ---\n".format(current_time))
+    print("--- LOG FILE : {} ---\n".format(args.outprefix +'.'+ current_time + '.log'))
     logging.basicConfig(
         filename=os.path.join(args.logdir, args.outprefix + '.' + current_time + '.log'),
         format='%(asctime)s %(message)s',
@@ -133,11 +133,11 @@ def set_logger(args, current_time):
         level=logging.DEBUG)
     logging.debug("--- START TIME : %s ---", current_time)
     # log what arguments were passed
-    print "--- ARGUMENTS ---"
+    print("--- ARGUMENTS ---")
     logging.debug("--- ARGUMENTS --- ")
     d_args = vars(args)
-    for option in d_args.keys():
-        print "--> {} : {}".format(option, d_args[option])
+    for option in list(d_args.keys()):
+        print("--> {} : {}".format(option, d_args[option]))
         logging.debug("--> %s : %s", option, d_args[option])
 
 def authenticate(cred_fn):
@@ -179,14 +179,14 @@ def main(args):
         locs = get_locations(args.geobox)
     set_logger(args, current_time)
     auth = authenticate(args.credentials)
-    print "--- Authentication complete ---"
+    print("--- Authentication complete ---")
     logging.debug("--- Authentication complete---")
     logging.debug("--- Starting stream ---")
     stream = set_stream(args, auth, current_time)
     if args.track:
-        print "--- Track terms ---\n"
-        print "--> The number of track terms : {} <--".format(len(track_terms))
-        print track_terms
+        print("--- Track terms ---\n")
+        print("--> The number of track terms : {} <--".format(len(track_terms)))
+        print(track_terms)
         logging.debug("--- Track terms ---\n"  + ' '.join(track_terms))
         logging.debug("--> The number of track terms : %d <--", len(track_terms))
         logging.debug("--- Started tracking ---")
@@ -207,11 +207,11 @@ def main(args):
         """
         Does not check user location field
         """
-        print "--- Bounding box : {}---\n".format(str(locs))
+        print("--- Bounding box : {}---\n".format(str(locs)))
         logging.debug("--- Bounding box : %s---", str(locs))
         stream.filter(locations=locs)
     else:
-        print "--- Listening to the Public Stream ---"
+        print("--- Listening to the Public Stream ---")
         logging.debug('--- Listening to the Public Stream---')
         stream.sample()
 if __name__ == '__main__':

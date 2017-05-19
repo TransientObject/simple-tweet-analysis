@@ -27,33 +27,33 @@ def by_loc(credentials, loc_fn):
                      timeout=10000, retry_delay=60)
 
     if not api:
-        print "Could not Authenticate"
+        print("Could not Authenticate")
         sys.exit(-1)
 
-    print "--- Authentication Successful ---"
+    print("--- Authentication Successful ---")
     l = get_loc(loc_fn)
     tout = open(os.path.join(loc_fn+"loc-kw-03-31-04-01."+time.strftime('%Y%m%d-%H%M%S')+ '.json'), 'a+')
     i = 0
     while True:
       try:
-        for tweet in tweepy.Cursor(api.search, geocode=l, rpp=100, lang='en').items():
+        for tweet in list(tweepy.Cursor(api.search, geocode=l, rpp=100, lang='en').items()):
             json.dump(tweet._json, tout)
             tout.write('\n')
-            print "Written {} tweets.".format(i)
+            print("Written {} tweets.".format(i))
             i += 1
       except TweepError as e:   
-        print str(e)
+        print(str(e))
 
     tout.close()
 
 def get_loc(loc_fn, radius=100):
     loc = get_locations(loc_fn)	
-    print loc 
+    print(loc) 
     x = (loc[0], loc[1])
     y = (loc[2], loc[3])
     center = (loc[0] + loc[2])/2, (loc[1] + loc[3])/2
     r = ','.join(map(str,[center[0], center[1], radius]))+"km"
-    print r 
+    print(r) 
     return r 
 
 if __name__ == "__main__":
