@@ -19,15 +19,16 @@ import os
 from nltk.tokenize import TweetTokenizer
 from collections import defaultdict
 import pickle
+from labMTsimple import storyLab
 
-def load_offsets(datapath, pickle=True):
+def load_offsets(datapath, pick=True):
     offsets = []
     offset = 0
-    with open(datapath, 'rb') as fin:
+    with open(datapath, 'r') as fin:
         for line in fin:
             offsets.append(offset)
             offset += len(line)
-    if pickle:
+    if pick:
         with open(datapath + 'line-offset.pkl', 'wb') as fout:
             pickle.dump(offsets, fout)
 
@@ -43,8 +44,8 @@ def has_kw(text, kwlist):
         return True
     
     words = text.split()
-    unigram_track = set([i for i in kwlist if ' ' not in i ])
-    ngram_track = [' ' + i + ' ' for i in kwlist if ' ' in i]
+    unigram_track = set([i for i in kwlist if ' ' not in str(i) ])
+    ngram_track = [' ' + i + ' ' for i in kwlist if ' ' in str(i)]
     matches = [x for x in words if x in unigram_track] 
     for track in ngram_track:
         if track in text:
@@ -79,7 +80,7 @@ def is_ascii(token):
 
 def get_track_terms(track_fn):
     """Returns list of track terms in the file"""
-    with open(track_fn, 'rb') as fin:
+    with open(track_fn, 'r') as fin:
         terms = fin.readlines()
     terms = [term.strip().lower() for term in terms]
     terms = list(set(terms))
@@ -163,8 +164,7 @@ def geofilter(tweet_obj, shp):
         return None
 
 def get_sentiment(text):
-    """Returns valence score of text, uses LabMT, removes stopValues"""
-    from labMTsimple import storyLab
+    """Returns valence score  of text, uses LabMT, removes stopValues"""
     lang = 'english'
     labMT,labMTvector,labMTwordList = storyLab.emotionFileReader(stopval=0.0,lang=lang,returnVector=True)
     textValence,textFvec = storyLab.emotion(text,labMT,shift=True,happsList=labMTvector)
@@ -245,7 +245,7 @@ class Workers(object):
         self.total_tf = 0
         self.total_df = 0
 
-        with open('rainbow.txt', 'rb') as fin:
+        with open('rainbow.txt', 'r') as fin:
             self.stopword = fin.readlines()
             self.stopword = [word.strip().lower() for word in self.stopword]
             self.stopword = set(self.stopword)
@@ -256,10 +256,10 @@ class Workers(object):
         self.track = get_track_terms(kw)
          
         if line_offsets:
-            with open(line_offsets, 'rb') as fin:
+            with open(line_offsets, 'r') as fin:
                 self.inlist = pickle.load(fin)
         else:
-            self.inlist = load_offsets(datapath, pickle=True) 
+            self.inlist = load_offsets(datapath, pick=True)
         print('--- # Tweets to preprocess :',len(self.inlist))
         print('--- Subroutine name : ' , subroutine)
         print('--- Output will be stored in : ' , self.outfile)
@@ -326,7 +326,7 @@ class Workers(object):
         offsets = set([])
         per_place = defaultdict(dict)
 
-        with open(self.outfile , "wb") as outfile:
+        with open(self.outfile , "w") as outfile:
             for works in range(self.numprocs):
                 for offset, val, tf, geotag in iter(self.outq.get , "STOP"):
                     if offset in offsets:
@@ -352,7 +352,7 @@ class Workers(object):
         result = defaultdict(dict)
         offsets = set([])
         per_place = defaultdict(dict)
-        with open(self.outfile , "wb") as outfile:
+        with open(self.outfile , "w") as outfile:
             for works in range(self.numprocs):
                 for offset, val, geotag, media in iter(self.outq.get , "STOP"):
                     if offset in offsets:
@@ -378,7 +378,7 @@ class Workers(object):
         stop = 0
         result = Counter(dict())
         offsets = set([])
-        with open(self.outfile , "wb") as outfile:
+        with open(self.outfile , "w") as outfile:
             for works in range(self.numprocs):
                 for offset, counter in iter(self.outq.get , "STOP"):
                     if offset in offsets:
@@ -396,7 +396,7 @@ class Workers(object):
         result = defaultdict(dict)
         offsets = set([])
         per_place = defaultdict(dict)
-        with open(self.outfile , "wb") as outfile:
+        with open(self.outfile , "w") as outfile:
             for works in range(self.numprocs):
                 for offset, val, ngrams, geotag in iter(self.outq.get , "STOP"):
                     if offset in offsets:
@@ -429,7 +429,7 @@ class Workers(object):
         result = defaultdict(dict)
         offsets = set([])
         per_place = defaultdict(dict)
-        with open(self.outfile , "wb") as outfile:
+        with open(self.outfile , "w") as outfile:
             for works in range(self.numprocs):
                 for offset, ngrams, geotag in iter(self.outq.get , "STOP"):
                     if offset in offsets:
@@ -455,7 +455,7 @@ class Workers(object):
         result = defaultdict(dict)
         offsets = set([])
         per_place = defaultdict(dict)
-        with open(self.outfile , "wb") as outfile:
+        with open(self.outfile , "w") as outfile:
             for works in range(self.numprocs):
                 for offset, val, geotag, text in iter(self.outq.get , "STOP"):
                     if offset in offsets:
@@ -475,7 +475,7 @@ class Workers(object):
                 for enum, k in enumerate(per_place[g]):
                     per_place[g][k]['magnitude'] = get_sentiment(' '.join(per_place[g][k]['text']))
                     #### delete the following line 
-                    per_place[g][k]['text'] = None
+                    #per_place[g][k]['text'] = None
                     print("----{}----{} computed".format(enum, k))
             json.dump(per_place, outfile)
             outfile.write('\n')
@@ -485,7 +485,7 @@ class Workers(object):
         stop = 0
         offsets = set([])
         per_place = defaultdict(dict)
-        with open(self.outfile , "wb") as outfile:
+        with open(self.outfile , "w") as outfile:
             for works in range(self.numprocs):
                 for offset, val, geotag, cnt in iter(self.outq.get , "STOP"):
                     if offset in offsets:
@@ -511,12 +511,12 @@ class Workers(object):
         cur = 0
         stop = 0
         buffer = {}
-        with open(self.outfile , "wb") as outfile:
+        with open(self.outfile , "w") as outfile:
             for works in range(self.numprocs):
                 for val in iter(self.outq.get , "STOP"):
                     outfile.write(val  + "\n")
     def tf(self):
-        with open(self.datapath, 'rb') as fin:
+        with open(self.datapath, 'r') as fin:
             for offset in iter(self.inq.get , "STOP"):
                 try:
                     fin.seek(offset)
@@ -547,7 +547,7 @@ class Workers(object):
         self.outq.put("STOP")  
 
     def media(self):
-        with open(self.datapath, 'rb') as fin:
+        with open(self.datapath, 'r') as fin:
             for offset in iter(self.inq.get , "STOP"):
                 try:
                     fin.seek(offset)
@@ -576,7 +576,7 @@ class Workers(object):
         
     def sentiment(self):
         import string
-        with open(self.datapath, 'rb') as fin:
+        with open(self.datapath, 'r') as fin:
             for offset in iter(self.inq.get , "STOP"):
                 try:
                     fin.seek(offset)
@@ -603,7 +603,7 @@ class Workers(object):
         self.outq.put("STOP")
 
     def count_retweet(self):
-        with open(self.datapath, 'rb') as fin:
+        with open(self.datapath, 'r') as fin:
             for offset in iter(self.inq.get , "STOP"):
                 try:
                     fin.seek(offset)
@@ -648,7 +648,7 @@ class Workers(object):
         """
         total_tf estimated here has no importance: do not use it
         """
-        with open(self.datapath, 'rb') as fin:
+        with open(self.datapath, 'r') as fin:
             for offset in iter(self.inq.get , "STOP"):
                 try:
                     fin.seek(offset)
@@ -678,7 +678,7 @@ class Workers(object):
 
     def profiler(self):
         """total tweets, retweet, english, geotagged tweets"""
-        with open(self.datapath, 'rb') as fin:
+        with open(self.datapath, 'r') as fin:
             for offset in iter(self.inq.get , "STOP"):
                 try:
                     profile={"total":0, "retweets-total": 0, "retweets-english":0, "retweets-geotagged":0, "non-retweets-total":0, "non-retweets-english":0, "non-retweets-geotagged":0}
@@ -707,7 +707,7 @@ class Workers(object):
 
     def term_correlation(self):
         """What are the terms that co-occur with given term: DF like"""
-        with open(self.datapath, 'rb') as fin:
+        with open(self.datapath, 'r') as fin:
             for offset in iter(self.inq.get , "STOP"):
                 try:
                     fin.seek(offset)
@@ -737,7 +737,7 @@ class Workers(object):
 
     def most_common(self):
         """What are the terms that co-occur with given term: DF like"""
-        with open(self.datapath, 'rb') as fin:
+        with open(self.datapath, 'r') as fin:
             for offset in iter(self.inq.get , "STOP"):
                 try:
                     fin.seek(offset)
