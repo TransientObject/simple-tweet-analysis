@@ -3,8 +3,12 @@ from os import listdir
 from os.path import isfile, join
 import json
 from nltk.tokenize import TweetTokenizer
+from collections import defaultdict
 
 class Tweet(object):
+    def __init__(self):
+        self.text = defaultdict(lambda: [])
+
     def preprocess(self, tweet):
         tokenizer = TweetTokenizer(preserve_case=False, reduce_len=True, strip_handles=False)
         text = tweet['text']
@@ -30,29 +34,24 @@ class Tweet(object):
 
     def df(self, datapath):
         with open(datapath, 'r') as f:
-            text, username = {}, ""
+            username = ""
             for line in f:
                 if not line.strip():
                     continue
                 tweet = line
                 tweet_obj = json.loads(tweet)
                 username = tweet_obj['user']['screen_name']
-                text[username] = ((self.preprocess(tweet_obj)) + " ")
-            for name in text.keys():
-                if "#ttot" in text[name]:
-                    print(name, text[name])
-            # text = ""
-            # line = f.readline()  # read only the first tweet/line
-            # tweet = json.loads(line)  # load it as Python dict
-            # #print(json.dumps(tweet, indent=4))  # pretty-print
-            # #tokens = preprocess(tweet['text'])
-            # text += ((self.preprocess(tweet)) + " ")
-
+                tweet_text = self.preprocess(tweet_obj)
+                if "#ttot" in tweet_text:
+                    self.text[username].append(tweet_text)
 
 
 s = Tweet()
-mypath = '/Users/priyanarayanasubramanian/Twitter Analysis/pac_nw_bb'
+#mypath = '/Users/priyanarayanasubramanian/Twitter Analysis/pac_nw_bb'
+mypath = ".\input_files"
 for filename in os.listdir(mypath):
     if filename.endswith(".json"):
         print(os.path.join(mypath, filename))
         s.df(mypath+"/"+filename)
+
+print(s.text)
