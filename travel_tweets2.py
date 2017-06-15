@@ -1,4 +1,5 @@
 import os
+import sys
 from os import listdir
 from os.path import isfile, join
 import json
@@ -36,15 +37,17 @@ class Tweet(object):
         with open(datapath, 'r') as f:
             username = ""
             for line in f:
-                if not line.strip():
-                    continue
-                tweet = line
-                tweet_obj = json.loads(tweet)
-                username = tweet_obj['user']['screen_name']
-                tweet_text = self.preprocess(tweet_obj)
-                if "#ttot" in tweet_text:
-                    self.text[username].append(tweet_text)
-
+                try:
+                    if not line.strip():
+                        continue
+                    tweet = line
+                    tweet_obj = json.loads(tweet)
+                    username = tweet_obj['user']['screen_name']
+                    tweet_text = self.preprocess(tweet_obj)
+                    if "#ttot" in tweet_text:
+                        self.text[username].append(tweet_text)
+                except:
+                    print("Unexpected error:", sys.exc_info()[0])
 
 s = Tweet()
 #mypath = '/Users/priyanarayanasubramanian/Twitter Analysis/pac_nw_bb'
@@ -52,6 +55,10 @@ mypath = ".\input_files"
 for filename in os.listdir(mypath):
     if filename.endswith(".json"):
         print(os.path.join(mypath, filename))
-        s.df(mypath+"/"+filename)
+        try:
+            s.df(mypath+"/"+filename)
+        except:
+            print("Unexpected error:", sys.exc_info()[0])
+
 
 print(s.text)
